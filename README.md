@@ -28,6 +28,3 @@ This repository serves as my personal development laboratory and knowledge base,
 ---
 
 **Maintained with ❤️ by Saksham Shekher**
-
-*Last updated: $(date)*
-```
