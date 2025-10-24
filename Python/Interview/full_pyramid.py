@@ -13,3 +13,10 @@ def print_full_pyramid(rows):
 # Example usage:
 num_rows = 5
 print_full_pyramid(num_rows)
+
+def print_full_pyramid(rows):
+    for i in range(1, rows + 1):
+        print(" " * (rows - i) + "*" * (2 * i - 1))
+
+# Example usage:
+print_full_pyramid(5)
