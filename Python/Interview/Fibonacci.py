@@ -9,7 +9,7 @@ def fibonacci_generator(limit):
 for number in fibonacci_generator(50):
     print(number)
 
-# second
+# second nth term
 
 num = 5
 a, b = 0, 1
