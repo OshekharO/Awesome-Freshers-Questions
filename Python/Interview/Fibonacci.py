@@ -19,3 +19,11 @@ for i in range(1,num):
     a = b
     b = c
     print(c, end=" ")
+
+# third
+
+num = 5
+a, b = 0, 1
+while a <= num:
+    print(a, end=" ")
+    a, b = b, a + b
