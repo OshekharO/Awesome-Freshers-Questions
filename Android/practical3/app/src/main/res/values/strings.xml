@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">Practical3</string>
+    <string name="main_activity_title">Main Activity</string>
+    <string name="second_activity_title">Second Activity</string>
+    <string name="navigate_button_text">Navigate to Second Activity</string>
+</resources>
