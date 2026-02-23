@@ -1,0 +1,146 @@
+name: Build and Release APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag name (optional)'
+        required: false
+        default: ''
+      release_name:
+        description: 'Release title (optional)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  discover:
+    name: Discover practicals
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Find practical directories
+        id: set-matrix
+        run: |
+          DIRS=$(find Android -maxdepth 1 -mindepth 1 -type d -name 'practical*' | sort | xargs -I{} basename {} | jq -R . | jq -sc . 2>/dev/null || echo '[]')
+          if [ "$DIRS" = "[]" ]; then
+            echo "No practical directories found under Android/." >&2
+          fi
+          echo "matrix=${DIRS}" >> $GITHUB_OUTPUT
+
+  build:
+    name: Build and Release APK
+    runs-on: ubuntu-latest
+    needs: discover
+
+    strategy:
+      matrix:
+        practical: ${{ fromJson(needs.discover.outputs.matrix) }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Generate Gradle wrapper
+        working-directory: Android/${{ matrix.practical }}
+        run: gradle wrapper --gradle-version 8.0
+
+      - name: Generate CI signing keystore
+        working-directory: Android/${{ matrix.practical }}
+        run: |
+          STORE_PASS=$(openssl rand -hex 16)
+          KEY_ALIAS=ci-release
+          KEYSTORE_PATH="$PWD/app/ci-release.keystore"
+          echo "CI_KEYSTORE_PASSWORD=$STORE_PASS" >> $GITHUB_ENV
+          echo "CI_KEY_ALIAS=$KEY_ALIAS" >> $GITHUB_ENV
+          echo "CI_KEYSTORE_FILE=$KEYSTORE_PATH" >> $GITHUB_ENV
+          keytool -genkeypair \
+            -alias "$KEY_ALIAS" \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -keystore "$KEYSTORE_PATH" \
+            -storepass "$STORE_PASS" \
+            -keypass "$STORE_PASS" \
+            -dname "CN=CI, OU=CI, O=CI, L=NA, S=NA, C=US"
+
+      - name: Make gradlew executable
+        working-directory: Android/${{ matrix.practical }}
+        run: chmod +x ./gradlew
+
+      - name: Build release APK
+        working-directory: Android/${{ matrix.practical }}
+        env:
+          ORG_GRADLE_PROJECT_ciKeystoreFile: ${{ env.CI_KEYSTORE_FILE }}
+          ORG_GRADLE_PROJECT_ciKeystorePassword: ${{ env.CI_KEYSTORE_PASSWORD }}
+          ORG_GRADLE_PROJECT_ciKeyAlias: ${{ env.CI_KEY_ALIAS }}
+          ORG_GRADLE_PROJECT_ciKeyPassword: ${{ env.CI_KEYSTORE_PASSWORD }}
+        run: ./gradlew assembleRelease
+
+      - name: Rename APK
+        working-directory: Android/${{ matrix.practical }}
+        run: |
+          SIGNED_APK=$(find app/build/outputs/apk/release -type f -name "*-release*.apk" ! -name "*-unsigned.apk" -print | LC_ALL=C sort | head -n 1)
+          UNSIGNED_APK=$(find app/build/outputs/apk/release -type f -name "*-release-unsigned.apk" -print | LC_ALL=C sort | head -n 1)
+          APK_PATH=${SIGNED_APK:-$UNSIGNED_APK}
+          if [ -z "$APK_PATH" ]; then
+            echo "No release APK found to rename." >&2
+            exit 1
+          fi
+          mv "$APK_PATH" app/build/outputs/apk/release/${{ matrix.practical }}.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.practical }}-release
+          path: Android/${{ matrix.practical }}/app/build/outputs/apk/release/${{ matrix.practical }}.apk
+
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Download all APK artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: '*-release'
+          path: apks
+          merge-multiple: true
+
+      - name: Prepare release metadata
+        run: |
+          INPUT_TAG="${{ github.event.inputs.tag }}"
+          INPUT_NAME="${{ github.event.inputs.release_name }}"
+          DEFAULT_TAG="manual-${{ github.run_number }}-${{ github.run_id }}"
+          TAG_NAME="${INPUT_TAG:-$DEFAULT_TAG}"
+          if [ -n "$INPUT_NAME" ]; then
+            RELEASE_NAME="$INPUT_NAME"
+          else
+            RELEASE_NAME="Build ${TAG_NAME}"
+          fi
+          echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_ENV
+          echo "RELEASE_NAME=${RELEASE_NAME}" >> $GITHUB_ENV
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2.5.0
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          name: ${{ env.RELEASE_NAME }}
+          generate_release_notes: true
+          files: apks/*.apk
