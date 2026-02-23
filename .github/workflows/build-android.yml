@@ -56,10 +56,6 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Generate Gradle wrapper
-        working-directory: Android/${{ matrix.practical }}
-        run: gradle wrapper --gradle-version 8.0
-
       - name: Generate CI signing keystore
         working-directory: Android/${{ matrix.practical }}
         run: |
