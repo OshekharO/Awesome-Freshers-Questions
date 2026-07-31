@@ -42,3 +42,11 @@ list_a = [1, 2, 3, 2, 1]
 is_palindrome = list_a == list_a[::-1]
 
 print(is_palindrome)
+
+#fifth
+
+words = ["radar", "python", "level", "world", "madam"]
+
+palindrome_words = [w for w in words if w == w[::-1]]
+
+print(palindrome_words)
