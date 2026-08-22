@@ -35,3 +35,21 @@ a, b = 0, 1
 for i in range(num):
     print(a, end=" ")
     a,b=b,a+b
+
+# fifth
+
+def fib_fast(n):
+    if n <= 0: return 0
+    if n == 1: return 1
+    
+    a, b = 0, 1
+    for _ in range(2, n + 1):
+        a, b = b, a + b
+    return b
+
+if __name__ == "__main__":
+    # Works instantly even if input list contains numbers like 100 or 1000
+    numbers = list(map(int, input().split()))
+    results = [fib_fast(num) for num in numbers]
+    print(*(results))
+
