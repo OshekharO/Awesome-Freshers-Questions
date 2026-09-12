@@ -50,3 +50,15 @@ words = ["radar", "python", "level", "world", "madam"]
 palindrome_words = [w for w in words if w == w[::-1]]
 
 print(palindrome_words)
+
+#6th
+
+def reverse_words_in_place(s):
+  return " ".join([word[::-1] for word in s.split()])
+
+
+# Example usage:
+input_str = "i love programming very much"
+output_str = reverse_words_in_place(input_str)
+print(output_str)  # Output: "i evol gnimmargorp yrev hcum"
+
