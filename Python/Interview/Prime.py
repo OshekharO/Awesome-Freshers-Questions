@@ -19,3 +19,10 @@ def find_primes_up_to_n(n):
 # Example usage:
 N = 50
 print(f"Prime numbers between 1 and {N}: {find_primes_up_to_n(N)}")
+
+#2
+
+N = 50
+primes = [x for x in range(2, N + 1) if all(x % i != 0 for i in range(2, int(x**0.5) + 1))]
+
+print(primes)
