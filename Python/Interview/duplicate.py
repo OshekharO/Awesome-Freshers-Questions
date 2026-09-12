@@ -48,3 +48,14 @@ print("Duplicate characters:", list(duplicates))
 
 # Join with no space
 print("".join(duplicates))
+
+#5th
+
+# Define the original array with duplicates
+original_array = [1, 2, 2, 3, 4, 4, 5, 1, 6]
+
+# Remove duplicates while keeping the original order
+unique_array = list(dict.fromkeys(original_array))
+
+# Print the result
+print("Array after removing duplicates:", unique_array)
