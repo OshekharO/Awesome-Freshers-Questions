@@ -59,3 +59,20 @@ unique_array = list(dict.fromkeys(original_array))
 
 # Print the result
 print("Array after removing duplicates:", unique_array)
+
+# Print 1st Unique Char From String
+
+string = "swiss"
+seen = set()
+duplicates = set()
+
+for char in string:
+    if char in seen:
+        duplicates.add(char)
+    else:
+        seen.add(char)
+
+for i in string:
+  if i not in duplicates:
+    print(i)
+    break;
