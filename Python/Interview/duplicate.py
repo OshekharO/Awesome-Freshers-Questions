@@ -31,3 +31,17 @@ for i in sting:
         seen = seen + i
 
 print(seen)
+
+#4th
+
+string = "ProminentPixel"
+seen = set()
+duplicates = set()
+
+for char in string:
+    if char in seen:
+        duplicates.add(char)
+    else:
+        seen.add(char)
+
+print("Duplicate characters:", list(duplicates))
