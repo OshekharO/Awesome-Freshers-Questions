@@ -45,3 +45,6 @@ for char in string:
         seen.add(char)
 
 print("Duplicate characters:", list(duplicates))
+
+# Join with no space
+print("".join(duplicates))
