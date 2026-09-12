@@ -76,3 +76,21 @@ for i in string:
   if i not in duplicates:
     print(i)
     break;
+
+#
+
+class Solution:
+    def firstUniqChar(self, s: str) -> int:
+        seen = set()
+        dupli = set()
+
+        for i in s:
+            if i in seen:
+                dupli.add(i)
+            else:
+                seen.add(i)
+
+        for idx, i in enumerate(s):
+            if i not in dupli:
+                return idx
+        return -1
