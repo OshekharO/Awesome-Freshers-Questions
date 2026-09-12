@@ -62,3 +62,23 @@ input_str = "i love programming very much"
 output_str = reverse_words_in_place(input_str)
 print(output_str)  # Output: "i evol gnimmargorp yrev hcum"
 
+# Reverse Integer
+
+class Solution:
+    def reverse(self, x: int) -> int:
+        cope = str(x)
+        next = ""
+
+        for i in cope:
+            next = i + next
+
+        if next.endswith('-'):
+            next = '-' + next[:-1]
+        
+        result = int(next)
+        
+        if result < -2**31 or result > 2**31 - 1:
+            return 0
+            
+        return result
+
