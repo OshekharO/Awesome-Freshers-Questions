@@ -1,20 +1,24 @@
 # 🚀 Development Lab & Prompt Library
 
-*A comprehensive collection of my experiments, code snippets, and AI prompts across multiple technologies and domains.*
+*A comprehensive collection of my experiments, code snippets, interview preparation guides, and AI prompts across multiple technologies and domains.*
 
 ![GitHub](https://img.shields.io/badge/Status-Active-brightgreen)
 ![License](https://img.shields.io/badge/License-Private-blue)
-![Version](https://img.shields.io/badge/Version-1.0.0-orange)
+![Version](https://img.shields.io/badge/Version-1.1.0-orange)
 
 ## 📋 Overview
 
 This repository serves as my personal development laboratory and knowledge base, containing:
 
 - **🧠 AI Prompts & Templates** - Curated collection of effective prompts for various AI tools
-- **🐍 Python Experiments** - Scripts, utilities, and learning projects
-- **☕ Java Applications** - Enterprise-level code and personal projects
-- **🌐 Web Development** - Frontend and backend code samples
-- **🔧 Utility Scripts** - Automation tools and productivity enhancers
+- **🐍 Python Experiments & Interview Prep** - Core cheat sheets and algorithmic interview solutions with multiple solving approaches (`Python/`)
+- **☕ Java Applications** - Enterprise-level code, OOP, and reference cheat sheets (`Java/`)
+- **🐧 Linux Fundamentals** - Administration, diagnostics, and command cheat sheets (`Linux/`)
+- **🚀 DevOps & Cloud** - Containerization, CI/CD pipelines, Kubernetes, zero-downtime deployment, and log diagnostics (`DevOps/`)
+- **⚛️ React Development** - Modern React 18/19 patterns, state management, concurrency, and interview logic (`React/`)
+- **🌐 Web Development & JavaScript** - Critical rendering path, event loop, deep cloning, debounce/throttle, and DOM optimization (`WebDeveloper/`)
+- **💻 IT Support & Administration** - ITIL workflows, OSI model troubleshooting, Active Directory, network repair, and disk cleanup (`ITSupport/`)
+- **🔧 Utility Scripts** - Automation tools and productivity enhancers (`Misc/`)
 - **📚 Learning Resources** - Code from tutorials and technical explorations
 
 ## 🤝 Contributing
