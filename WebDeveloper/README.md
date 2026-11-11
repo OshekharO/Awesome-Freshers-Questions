@@ -1,6 +1,6 @@
 # Web Development & JavaScript Cheat Sheet 🌐⚡
 
-*Curated for freshers and junior web developers with technical interview questions asked as of November 2026 (ES2024+, Modern Web APIs, CSS Layouts, Performance).*
+*Curated for freshers and junior web developers with comprehensive technical interview questions asked as of November 2026 (ES2024+, Modern Web APIs, Event Loop, CSS Layouts, Web Security, Performance).*
 
 ---
 
@@ -16,9 +16,9 @@
 
 ### JavaScript Runtime & The Event Loop
 - **Call Stack**: Executes synchronous code (LIFO).
-- **Web APIs**: Browser threads handling asynchronous timers, fetch requests, DOM events.
-- **Task / Macrotask Queue**: `setTimeout`, `setInterval`, `setImmediate`, I/O.
+- **Web APIs**: Browser background threads handling asynchronous timers, fetch requests, DOM events.
 - **Microtask Queue**: `Promise.then/catch/finally`, `queueMicrotask()`, `MutationObserver`.
+- **Task / Macrotask Queue**: `setTimeout`, `setInterval`, `setImmediate`, I/O.
 - **Priority Rule**: The Event Loop empties the entire Microtask Queue *immediately after* the current stack frame empties, *before* executing the next macrotask or rendering the screen.
 
 ---
@@ -51,7 +51,27 @@ Shallow cloning (like `{ ...obj }` or `Object.assign({}, obj)`) only copies top-
 
 ---
 
-### Question 2: What is the difference between Debounce and Throttle, and how do you implement them?
+### Question 2: What is Event Delegation and how does it leverage Event Bubbling and Capturing?
+
+#### Logic & Background:
+When a web page has hundreds or thousands of clickable list items (e.g. an e-commerce catalog or chat list), attaching an event listener to every single item degrades memory performance and fails for dynamically added items.
+
+#### The Three Phases of DOM Events:
+1. **Capturing Phase**: The event travels down from `window` through the DOM hierarchy to the target element.
+2. **Target Phase**: The event reaches the actual element clicked.
+3. **Bubbling Phase**: The event bubbles up from the target element back up to `window`.
+
+#### Event Delegation Logic:
+- Attach **one single event listener** to the parent container element (`<ul>` or `<table>`).
+- In the handler, check `event.target` (the actual clicked element) or `event.target.closest('.item-btn')`.
+- Read custom dataset attributes (`event.target.dataset.id`) to execute the action.
+- **Benefits**:
+  - Eliminates thousands of event listener allocations.
+  - Automatically works for newly added DOM elements without re-attaching listeners.
+
+---
+
+### Question 3: What is the difference between Debounce and Throttle, and how do you implement them?
 
 #### Logic & Background:
 Both limit the rate at which a function executes, but for different user experience needs.
@@ -72,63 +92,94 @@ Both limit the rate at which a function executes, but for different user experie
 
 ---
 
-### Question 3: How do you optimize DOM Manipulation when inserting thousands of elements?
+### Question 4: How do JavaScript Closures work, and what are practical use cases and memory leak risks?
 
 #### Logic & Background:
-Directly appending elements to the DOM in a loop (e.g. 5,000 times) triggers 5,000 reflows and repaints, locking the browser UI thread and causing severe lag.
+A closure is the combination of a function bundled together with references to its surrounding lexical environment. In JavaScript, inner functions always have access to variables in their outer enclosing scope, even after the outer function has returned.
 
-#### Method 1: `DocumentFragment` (Virtual Batch Insertion)
-- **Logic**:
-  1. Create a lightweight off-screen container: `const fragment = document.createDocumentFragment();`.
-  2. In the loop, create elements and append them to the fragment.
-  3. Append the single fragment to the live DOM: `container.appendChild(fragment);`.
-- **Benefit**: Triggers only **one single reflow and repaint** for all items.
+#### Practical Use Cases:
+1. **Data Privacy / Encapsulation**: Emulating private variables before ES private fields `#`:
+   ```javascript
+   function createCounter() {
+     let count = 0; // Private to closure
+     return {
+       increment: () => ++count,
+       get: () => count
+     };
+   }
+   ```
+2. **Function Currying / Partial Application**: Pre-configuring arguments (e.g. logging formats, discount multipliers).
+3. **Event Handlers & Callback Timers**: Maintaining state references inside async handlers.
 
-#### Method 2: String Template Literals with `insertAdjacentHTML()`
-- **Logic**: Build an array of HTML strings in JavaScript memory (`items.map(...).join('')`) and insert with `container.insertAdjacentHTML('beforeend', htmlString)`.
-- **Benefit**: Extremely fast parsing by browser C++ engine; avoids overhead of individual JavaScript DOM node objects.
-
-#### Method 3: Virtual Scrolling (Virtualization)
-- **Logic**: Only render the ~20 items currently visible in the user's viewport, replacing items dynamically as the user scrolls.
-- **Tools / Libraries**: TanStack Virtual, react-window.
+#### Memory Leak Risks & Mitigation:
+- If an unused outer variable is captured in a long-lived closure (e.g. attached to `window` or a global DOM event listener), the garbage collector cannot free the memory.
+- *Mitigation*: Nullify references (`ref = null`) or properly remove event listeners on component cleanup.
 
 ---
 
-### Question 4: How do you implement an API Fetch with Automatic Retries and Exponential Backoff?
+### Question 5: Compare Promise Combinators: `Promise.all()`, `Promise.allSettled()`, `Promise.race()`, and `Promise.any()`.
 
 #### Logic & Background:
-Transient network errors or temporary 503 Service Unavailable responses should be gracefully retried before showing an error screen to the user.
+Handling multiple asynchronous operations concurrently is a frequent interview topic.
 
-#### Method 1: Async/Await Loop with Delay Sleep (Imperative)
-- **Logic**:
-  1. Wrap `fetch` inside a `for` loop up to `maxRetries`.
-  2. Inside a `try/catch`, check `response.ok`. If successful, return the data.
-  3. If failed and attempts remain, calculate backoff delay: `delay * Math.pow(2, attempt)`.
-  4. Wait using a promise-based sleep `await new Promise(resolve => setTimeout(resolve, backoff))`.
-  5. If all attempts exhaust, throw the final error.
-
-#### Method 2: Recursive Promise Retry
-- **Logic**: Define a function that calls itself in the `.catch()` block with decremented `retriesLeft` until 0.
-
-#### Method 3: Modern Native HTTP Standards (Browser Cache API / Service Workers)
-- **Logic**: Intercept requests via a Service Worker (`fetch` event) to serve stale-while-revalidate cached content when offline or retrying background sync.
+| Combinator | Resolves When... | Rejects When... | Ideal Use Case |
+|---|---|---|---|
+| `Promise.all([p1, p2])` | **All** promises resolve (returns array of results) | **Any single** promise rejects (fails fast) | Fetching interdependent resources where all are strictly required |
+| `Promise.allSettled([p1, p2])` | **All** promises either resolve or reject | **Never** rejects (returns status and value/reason for each) | Batch operations (e.g., uploading 10 files; show which succeeded and which failed) |
+| `Promise.race([p1, p2])` | The **very first** promise settles (resolves OR rejects) | Whichever settles first rejects | Setting an API network request timeout promise |
+| `Promise.any([p1, p2])` | The **first successful** promise resolves | **All** promises reject (returns `AggregateError`) | Querying redundant CDN mirrors for fastest response |
 
 ---
 
-### Question 5: CSS Layouts: When should you choose Flexbox vs CSS Grid?
+### Question 6: What are XSS, CSRF, and CORS, and how do you protect web applications against them?
 
 #### Logic & Background:
-Freshers frequently confuse 1-dimensional vs 2-dimensional layouts.
+Web security knowledge separates junior developers who only write UI from engineers who build production-ready applications.
 
-#### Solution Breakdown:
-- **Flexbox (1-Dimensional)**:
-  - Designed for layout along a single axis at a time (either row OR column).
-  - Best for: Navigation bars, buttons inside a card, centering items horizontally & vertically (`justify-content: center; align-items: center;`), input groups with icon and text.
-  - Content-out approach: Element size is driven by content unless explicitly constrained.
-- **CSS Grid (2-Dimensional)**:
-  - Designed for simultaneous row AND column alignment.
-  - Best for: Full page application layouts, card galleries with auto-responsive columns (`grid-template-columns: repeat(auto-fit, minmax(250px, 1fr))`), dashboard widgets.
-  - Layout-in approach: Grid tracks dictate the exact placement and sizes of children.
+#### 1. Cross-Site Scripting (XSS)
+- **Attack**: Attacker injects malicious JavaScript into a web page viewed by other users (stealing session tokens or cookies).
+- **Defense**:
+  - Always sanitize and escape user input before rendering into HTML.
+  - Use modern frameworks (React/Vue) that automatically escape content by default (avoid `dangerouslySetInnerHTML`).
+  - Set `HttpOnly` and `SameSite=Strict` flags on authentication cookies so JavaScript cannot read them.
+  - Implement a strong **Content Security Policy (CSP)** HTTP header.
+
+#### 2. Cross-Site Request Forgery (CSRF)
+- **Attack**: Malicious third-party website tricks an authenticated user's browser into submitting unauthorized requests to your API.
+- **Defense**:
+  - Set `SameSite=Lax` or `SameSite=Strict` on cookies.
+  - Implement Anti-CSRF tokens (Synchronizer Token pattern) in mutating POST/PUT/DELETE requests.
+  - Check origin and referer headers on server endpoints.
+
+#### 3. Cross-Origin Resource Sharing (CORS)
+- **Concept**: A browser security mechanism that restricts cross-origin HTTP requests initiated by scripts.
+- **Resolution**: CORS is configured **on the server**, not in client code. The server must return appropriate `Access-Control-Allow-Origin`, `Access-Control-Allow-Methods`, and `Access-Control-Allow-Headers` response headers.
+
+---
+
+### Question 7: How do you optimize Web Performance and Core Web Vitals (LCP, INP, CLS)?
+
+#### Logic & Background:
+Google ranks search performance and users abandon sluggish pages based on Core Web Vitals metrics.
+
+#### The Three Core Web Vitals:
+1. **LCP (Largest Contentful Paint)**: Measures perceived loading speed (target: < 2.5s).
+   - *Optimization*: Preload hero images (`<link rel="preload">`), use modern WebP/AVIF formats, optimize Server Response Time (TTFB), employ CDN caching.
+2. **INP (Interaction to Next Paint)**: Measures page responsiveness to user input (target: < 200ms; replaced FID in 2024+).
+   - *Optimization*: Break up long-running JavaScript tasks using `scheduler.yield()` or `setTimeout`, offload CPU-heavy math to Web Workers.
+3. **CLS (Cumulative Layout Shift)**: Measures visual layout stability (target: < 0.1).
+   - *Optimization*: Always include explicit `width` and `height` attributes on images and video embeds; reserve space for dynamic ads/banners with CSS aspect-ratio.
+
+---
+
+### Question 8: Client Storage Comparison: LocalStorage vs SessionStorage vs Cookies vs IndexedDB
+
+| Storage Type | Capacity | Lifetime | Server Accessible | Best Use Case |
+|---|---|---|---|---|
+| **LocalStorage** | ~5-10 MB | Persistent until manually cleared | No (Client only) | User UI preferences (Dark mode, draft form saves) |
+| **SessionStorage** | ~5 MB | Tab lifetime (cleared on close) | No (Client only) | Single-tab checkout wizard or temporary form steps |
+| **Cookies** | ~4 KB | Configurable via `Expires` / `Max-Age` | Yes (sent with every HTTP request) | Secure authentication tokens (`HttpOnly; Secure; SameSite=Strict`) |
+| **IndexedDB** | > 250 MB (GBs) | Persistent | No (Client only) | Offline caching, PWA datasets, complex object stores |
 
 ---
 

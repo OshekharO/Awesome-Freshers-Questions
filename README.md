@@ -10,7 +10,7 @@
 
 This repository serves as my personal development laboratory and knowledge base, containing:
 
-- **🧠 AI Prompts & Templates** - Curated collection of effective prompts for various AI tools
+- **🧠 AI Prompts & Templates** - Curated collection of effective prompts, engineering frameworks, and AI interview prep (`Prompt/`)
 - **🐍 Python Experiments & Interview Prep** - Core cheat sheets and algorithmic interview solutions with multiple solving approaches (`Python/`)
 - **☕ Java Applications** - Enterprise-level code, OOP, and reference cheat sheets (`Java/`)
 - **🐧 Linux Fundamentals** - Administration, diagnostics, and command cheat sheets (`Linux/`)

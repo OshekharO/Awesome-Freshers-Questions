@@ -1,6 +1,6 @@
 # IT Support & Desktop Administration Cheat Sheet 💻🛠️
 
-*Curated for freshers and entry-level IT Support Specialists / Helpdesk Engineers with technical interview questions asked as of November 2026.*
+*Curated for freshers and entry-level IT Support Specialists / Helpdesk Engineers with comprehensive technical interview questions asked as of November 2026.*
 
 ---
 
@@ -81,16 +81,14 @@ Tests systematic network isolation: Is the issue local to the device, local netw
 Active Directory account lockout policies protect against brute-force attacks after N failed attempts (typically 3 to 5).
 
 #### Method 1: Active Directory Administrative Center / ADUC (GUI)
-- **Logic**: Open **Active Directory Users and Computers (ADUC)** on domain controller / RSAT.
-- **Steps**:
-  1. Search for the user's username.
-  2. Double-click the user and open the **Account** tab.
-  3. Check the box **"Unlock account. This account is currently locked out on this Active Directory Domain Controller"**.
-  4. Click **Apply** and **OK**.
+- Open **Active Directory Users and Computers (ADUC)** on domain controller / RSAT.
+- Search for the user's username.
+- Double-click the user and open the **Account** tab.
+- Check the box **"Unlock account. This account is currently locked out on this Active Directory Domain Controller"**.
+- Click **Apply** and **OK**.
 
 #### Method 2: PowerShell ActiveDirectory Module (CLI / Automation)
-- **Logic**: Use the official Microsoft Active Directory PowerShell cmdlet.
-- **Commands**:
+- Commands:
   ```powershell
   # Check if account is locked
   Get-ADUser -Identity "john.doe" -Properties LockedOut | Select-Object Name, LockedOut
@@ -98,11 +96,10 @@ Active Directory account lockout policies protect against brute-force attacks af
   # Unlock account
   Unlock-ADAccount -Identity "john.doe"
   ```
-- **Pros**: Can be scripted or run directly from helpdesk ticketing automation.
+- Can be triggered automatically from helpdesk ticketing workflows.
 
-#### Method 3: Local Windows Account via Command Prompt / Net User (Workgroup / Non-domain machine)
-- **Logic**: If the machine is standalone and not bound to Active Directory domain.
-- **Commands**:
+#### Method 3: Local Windows Account via Command Prompt / Net User (Workgroup machine)
+- Commands:
   ```cmd
   net user john.doe /active:yes
   net user john.doe NewPassword123!
@@ -110,61 +107,136 @@ Active Directory account lockout policies protect against brute-force attacks af
 
 ---
 
-### Question 3: A user's C: drive is 99% full, causing Windows crashes and sluggish performance. How do you free up disk space?
+### Question 3: A user experiences a Blue Screen of Death (BSOD) with `CRITICAL_PROCESS_DIED` or `DRIVER_IRQL_NOT_LESS_OR_EQUAL`. How do you diagnose and fix it?
 
 #### Logic & Background:
-Full OS drives block virtual memory paging, Windows updates, and software installations.
+BSOD indicates a fatal Windows kernel crash caused by corrupted system files, faulty device drivers, or defective hardware (e.g. failing RAM/SSD).
 
-#### Method 1: Windows GUI Tools (Storage Sense & Disk Cleanup)
-- **Steps**:
-  1. Press `Win + R`, type `cleanmgr /sageset:1`, select all items (Temporary files, Recycle Bin, Windows Update Cleanup), and run `cleanmgr /sagerun:1`.
-  2. Enable **Settings > System > Storage > Storage Sense** for automated temp file deletion.
-
-#### Method 2: Command Line (CMD / Batch Script)
-- **Commands**:
+#### Method 1: System File Repair via DISM and SFC (Command Line)
+- Boot into Safe Mode or Windows Recovery Environment (WinRE) Command Prompt:
   ```cmd
-  del /q/f/s "%TEMP%\*"
-  del /q/f/s "%WINDIR%\Temp\*"
-  cleanmgr /verylowdisk
-  Dism.exe /online /Cleanup-Image /StartComponentCleanup /ResetBase
-  ```
-- **Note**: `Dism.exe` removes superseded Windows update backup files, often reclaiming 5GB to 15GB.
+  # Repair Windows component store online image
+  DISM /Online /Cleanup-Image /RestoreHealth
 
-#### Method 3: PowerShell Scripting with Analysis
-- **Logic**: Find top 10 largest directories before deleting blindly:
-  ```powershell
-  Get-ChildItem -Path C:\ -Directory | ForEach-Object {
-      [PSCustomObject]@{
-          Folder = $_.FullName
-          SizeGB = [math]::Round((Get-ChildItem $_.FullName -Recurse -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum / 1GB, 2)
-      }
-  } | Sort-Object SizeGB -Descending | Select-Object -First 10
+  # Scan and replace corrupted protected system files
+  sfc /scannow
+
+  # Check and repair filesystem disk errors
+  chkdsk C: /f /r
   ```
+
+#### Method 2: Windows Minidump Analysis (Root Cause Identification)
+- Inspect memory dump file located at `C:\Windows\Minidump\*.dmp` using **BlueScreenView** or Microsoft **WinDbg**:
+  - Run `!analyze -v` in WinDbg.
+  - Inspect `MODULE_NAME` and `IMAGE_NAME` to pinpoint the exact faulty `.sys` driver (e.g. display graphics, network driver, antivirus filter driver).
+  - Boot into Safe Mode and roll back or reinstall the specific driver in **Device Manager**.
+
+#### Method 3: Hardware Diagnostics (RAM & Storage)
+- **RAM Check**: Run Windows Memory Diagnostic tool (`mdsched.exe`) or MemTest86.
+- **Disk Health**: Check S.M.A.R.T. status using PowerShell `Get-PhysicalDisk` or CrystalDiskInfo.
 
 ---
 
-### Question 4: How do you identify whether a computer is infected with malware or a suspicious rogue process?
+### Question 4: A network printer is showing "Offline" or print jobs are permanently stuck in the queue. How do you resolve it?
 
 #### Logic & Background:
-Endpoint security is a primary responsibility for IT Support in preventing ransomware spread across internal corporate networks.
+Print queue deadlocks occur when a corrupted document file locks the Windows Print Spooler service.
 
-#### Method 1: Immediate Network Isolation (Containment First)
-- Disconnect Ethernet cable and turn off Wi-Fi immediately to prevent lateral movement or data exfiltration.
-
-#### Method 2: Task Manager & Resource Monitor Analysis (GUI)
-- Open **Task Manager** (`Ctrl + Shift + Esc`).
-- Inspect Startup apps tab, sort Processes by CPU/Memory.
-- Right-click unknown high-utilization processes and choose **Open file location** and **Search online**.
-- Verify digital signatures on the `.exe` file (Properties > Digital Signatures).
-
-#### Method 3: Windows Sysinternals & Command Line (Advanced Triage)
-- **Commands**:
+#### Method 1: Restart Print Spooler and Clear Queue Files (Command Prompt)
+- Run as Administrator:
   ```cmd
-  netstat -ano | findstr ESTABLISHED   :: Check active network sockets and foreign IPs with PID
-  tasklist /fi "PID eq <suspicious_pid>"
-  wmic process where processid=<PID> get ExecutablePath,CommandLine
+  net stop spooler
+  del /Q /F /S "%systemroot%\System32\Spool\Printers\*.*"
+  net start spooler
   ```
-- **Tools**: Run **Autoruns** (Sysinternals) to inspect persistence mechanisms (Registry Run keys, Scheduled Tasks, Services).
+- **Why**: Deletes stuck spool files (`.shd` and `.spl`) from disk before restarting the spooler daemon.
+
+#### Method 2: PowerShell Service and TCP/IP Port Triage
+- Commands:
+  ```powershell
+  Restart-Service -Name Spooler -Force
+  Test-NetConnection -ComputerName "192.168.1.150" -Port 9100 # Standard RAW print port
+  Get-Printer -Name "Office-Floor2" | Select-Object Name, PrinterStatus, PortName
+  ```
+
+#### Method 3: GUI Triage
+- Open **Settings > Bluetooth & devices > Printers & scanners**.
+- Select the printer > **Open print queue** > **Printer** menu > uncheck **"Use Printer Offline"**.
+- Delete and re-add the printer via IP address rather than WSD (Web Services for Devices) which is notoriously prone to sleep/offline bugs.
+
+---
+
+### Question 5: A user reports that Microsoft Outlook will not open or is stuck on "Loading Profile". How do you troubleshoot?
+
+#### Logic & Background:
+Usually caused by a corrupt Outlook add-in, corrupted navigation pane cache, or bloated/corrupted local OST/PST data file.
+
+#### Method 1: Launch in Safe Mode & Disable Add-ins
+- Press `Win + R`, type `outlook.exe /safe` and press Enter.
+- If Outlook opens normally in safe mode, an add-in is the culprit:
+  - Go to **File > Options > Add-ins > COM Add-ins > Go**.
+  - Uncheck third-party add-ins (e.g. Adobe, Zoom, Antivirus plugins) one by one to isolate the issue.
+
+#### Method 2: Reset Navigation Pane & Data File Repair
+- Clear navigation pane: `outlook.exe /resetnavpane`.
+- Repair corrupted PST/OST files using the built-in Microsoft Inbox Repair Tool:
+  - Run `scanpst.exe` (found in `C:\Program Files\Microsoft Office\root\Office16\scanpst.exe`).
+
+#### Method 3: Recreate Outlook Profile / OST Data File
+- Close Outlook.
+- Navigate to `%localappdata%\Microsoft\Outlook` and rename the account `.ost` file to `.ost.old`.
+- Open **Control Panel > Mail (Microsoft Outlook) > Show Profiles > Add**.
+- Create a clean profile; Outlook will reconnect to Microsoft 365 Exchange and automatically redownload the mailbox cleanly.
+
+---
+
+### Question 6: A remote employee cannot connect to the corporate VPN. How do you troubleshoot?
+
+#### Logic & Background:
+Remote work relies heavily on secure VPN tunnels (Cisco AnyConnect, GlobalProtect, OpenVPN). Failures typically stem from local Wi-Fi captive portals, stale virtual network adapters, or conflicting subnets.
+
+#### Method 1: Check Captive Portal & Internet Reachability
+- Can the user open a public web browser page?
+- Often, users at coffee shops or airports haven't accepted the Wi-Fi terms & conditions. Once accepted, VPN connects immediately.
+
+#### Method 2: Reinstall / Reset Virtual TAP Adapter (Device Manager)
+- In **Device Manager**, expand **Network adapters**.
+- Right-click the VPN virtual adapter (e.g., Cisco AnyConnect Secure Mobility Client Virtual Miniport Adapter).
+- Choose **Uninstall device**, then in VPN client select repair or reboot machine to let Windows reinstall the clean driver.
+
+#### Method 3: Subnet Conflict & MTU Adjustment
+- If the employee's home router uses the identical subnet as the corporate internal network (e.g. both use `192.168.1.0/24`), routing breaks.
+- Enable **Split Tunneling** or lower MTU packet size (from 1500 to 1350) using `netsh interface ipv4 set subinterface "VPN" mtu=1350 store=persistent` to avoid packet fragmentation over home ISPs.
+
+---
+
+### Question 7: Remote Desktop (RDP) connection fails with "Remote Desktop can't connect to the remote computer". How do you troubleshoot?
+
+#### Logic & Background:
+Tests understanding of RDP service states, firewall port 3389 rules, and Network Level Authentication (NLA).
+
+#### Method 1: Remote Connectivity & Port Verification (PowerShell)
+- Run from helpdesk workstation:
+  ```powershell
+  Test-NetConnection -ComputerName "PC-ACCOUNTING-04" -Port 3389
+  ```
+- If `TcpTestSucceeded : False`, the host is powered off, sleeping, or port 3389 is blocked by Windows Defender Firewall.
+
+#### Method 2: Windows Services & Firewall Check (CMD)
+- Ensure the TermService service is running:
+  ```cmd
+  sc query TermService
+  sc start TermService
+  ```
+- Enable RDP rule in Windows Firewall:
+  ```cmd
+  netsh advfirewall firewall set rule group="remote desktop" new enable=Yes
+  ```
+
+#### Method 3: Network Level Authentication (NLA) Workaround
+- If user credentials fail before screen connects, NLA is rejecting the client.
+- Disable NLA temporarily via registry or System Properties:
+  - System Properties > Remote tab > uncheck "Allow connections only from computers running Remote Desktop with Network Level Authentication".
 
 ---
 

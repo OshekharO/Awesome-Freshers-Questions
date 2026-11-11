@@ -1,13 +1,13 @@
 # React Basics & Modern Concepts Cheat Sheet ⚛️📱
 
-*Curated for freshers and junior frontend engineers with technical interview questions asked as of November 2026 (React 18 & React 19 standards).*
+*Curated for freshers and junior frontend engineers with comprehensive technical interview questions asked as of November 2026 (React 18 & React 19 standards).*
 
 ---
 
 ## Part 1: Core React Fundamentals
 
 ### What is React?
-React is a declarative, component-based JavaScript library for building user interfaces. It maintains an in-memory Virtual DOM and calculates minimum required real DOM updates using a reconciliation algorithm (Fiber).
+React is a declarative, component-based JavaScript library for building user interfaces. It creates and updates UI efficiently using a Virtual DOM and a reconciliation algorithm (Fiber).
 
 ### JSX (JavaScript XML)
 A syntax extension for JavaScript that allows writing HTML-like markup inside JS. Under the hood, JSX compiles into standard JavaScript function calls (`React.createElement` or JSX runtime `jsx()`).
@@ -30,6 +30,7 @@ In modern React, **Function Components with Hooks** are the universal standard. 
 | `useCallback` | Cache function reference between re-renders | Passing callback props to memoized child components |
 | `useDeferredValue` | Defer re-rendering a non-critical part of UI | Responsive typing in search while list filters |
 | `useTransition` | Mark state update as non-blocking transition | Tab switching, large dataset transitions |
+| `useActionState` | Modern React 19 form actions handling | Automatic pending state and server form submission |
 
 ---
 
@@ -56,7 +57,47 @@ Tests understanding of React's asynchronous state updates, batching, and when to
 
 ---
 
-### Question 2: How do you implement a Debounced Search Input to prevent excessive API calls while a user types?
+### Question 2: How do you prevent Unnecessary Re-renders in React components?
+
+#### Logic & Background:
+A parent re-render causes all child components to re-render by default, even if their props have not changed. In heavy UI trees, this causes frame drops and sluggish interaction.
+
+#### Method 1: `React.memo` (Memoizing Pure Child Components)
+- **Logic**: Wrap child component in `React.memo(ChildComponent)`.
+- **How it works**: Performs a shallow comparison (`Object.is`) of incoming props. If props are identical, skips re-rendering the child.
+- **Requirement**: Pair with `useCallback` for function props and `useMemo` for non-primitive object/array props so references don't change every render.
+
+#### Method 2: Component Architecture / Moving State Down
+- **Logic**: Do not keep local state at a high parent level if only a tiny sub-component needs it.
+- **Example**: If an input box or toggle only affects a small banner, encapsulate the state inside that specific banner component. The rest of the page won't re-render on typing.
+
+#### Method 3: Passing Components as `children` or Props (Slot Pattern)
+- **Logic**: Wrap expensive UI elements inside parent components using `{children}`.
+- **Why**: When the wrapper component updates its own state, React recognizes that `children` props have not changed in reference and skips re-rendering them.
+
+---
+
+### Question 3: How do you resolve "Prop Drilling" in a large React application?
+
+#### Logic & Background:
+Prop drilling occurs when data needs to be passed down through several layers of intermediate components that don't need the data themselves just to reach a deeply nested child.
+
+#### Method 1: React Context API (`createContext` & `useContext`)
+- **Logic**: Provide data at a top-level provider and consume it anywhere down the tree via `useContext(MyContext)`.
+- **Best for**: Low-frequency global state (Current user session, theme dark/light, internationalization locale).
+- **Caveat**: Every component reading the context re-renders whenever any value in that context object changes.
+
+#### Method 2: Component Composition (Inversion of Control)
+- **Logic**: Instead of passing props down 5 levels so `<GrandChild user={user} />` can be rendered, render the grandchild at the top level and pass it as a JSX prop: `<Parent middle={<GrandChild user={user} />} />`.
+- **Best for**: Clean architecture without external dependencies.
+
+#### Method 3: External State Management (Zustand, Redux Toolkit)
+- **Logic**: Decouple state outside of the React component tree into a central store with selective subscriptions (`useStore(state => state.user)`).
+- **Benefit**: Only components subscribed to specific slice of state re-render.
+
+---
+
+### Question 4: How do you implement a Debounced Search Input to prevent excessive API calls while a user types?
 
 #### Logic & Background:
 Every keystroke in a search box should not fire an immediate network request. Debouncing delays the execution of a function until a specified time has passed since it was last called.
@@ -82,7 +123,7 @@ Every keystroke in a search box should not fire an immediate network request. De
 
 ---
 
-### Question 3: How do you safely fetch API data in React without memory leaks or race conditions?
+### Question 5: How do you safely fetch API data in React without memory leaks or race conditions?
 
 #### Logic & Background:
 When a user navigates quickly between pages or switches dropdown items (e.g., User ID 1 -> User ID 2), network requests might return out of order (race condition), or complete after the component has unmounted.
@@ -102,31 +143,63 @@ When a user navigates quickly between pages or switches dropdown items (e.g., Us
   3. Return `() => { ignore = true; }` in the cleanup function.
 - **Pros**: Very simple and works for non-fetch async operations (like third-party SDK promises that don't support `AbortSignal`).
 
-#### Method 3: React Server Components & React 19 `use` Hook / Modern Data Libraries (TanStack Query)
+#### Method 3: Modern Data Libraries (TanStack Query) & React 19 `use` Hook
 - **Logic**: Avoid doing client-side data fetching inside `useEffect` altogether.
 - **Modern approach**:
   - Use TanStack Query (React Query) which handles automatic caching, deduplication, retry, and cancellation out of the box.
-  - In React 19 / Next.js: Fetch data directly on the server inside Server Components or use the React 19 `use(Promise)` hook with `<Suspense>`.
+  - In React 19: Use Server Components or the `use(Promise)` hook with `<Suspense>`.
 
 ---
 
-### Question 4: How do you implement CRUD operations in a List while adhering to state immutability?
+### Question 6: Controlled vs Uncontrolled Components in React: What is the difference and how does React 19 Form Actions change it?
 
 #### Logic & Background:
-In React, state should never be mutated directly (e.g. `todos.push(newTodo)` or `todo.completed = true`). React compares object references; mutating directly prevents re-renders and breaks time-travel debugging.
+Handling form inputs is one of the most core tasks in frontend applications.
 
-#### Method 1: Pure JavaScript Array Methods (`spread`, `map`, `filter`)
-- **Add**: `setTodos(prev => [...prev, newItem])` (creates new array with spread).
-- **Update / Toggle**: `setTodos(prev => prev.map(item => item.id === targetId ? { ...item, completed: !item.completed } : item))` (maps to new object references only for modified items).
-- **Delete**: `setTodos(prev => prev.filter(item => item.id !== targetId))` (returns a new array without the target item).
-- **Pros**: Clean, standard, built into JS without external dependencies.
+#### Method 1: Controlled Components (React State as Single Source of Truth)
+- Input value is bound to state: `value={state}` with `onChange={(e) => setState(e.target.value)}`.
+- *Pros*: Instant validation, conditional disabling of submit buttons, formatting inputs on the fly (e.g. credit card mask).
+- *Cons*: Re-renders the component on every single keystroke.
 
-#### Method 2: Centralized `useReducer`
-- **Logic**: Dispatch distinct action types (`ADD_TODO`, `TOGGLE_TODO`, `DELETE_TODO`). State transformations remain pure functions.
-- **Pros**: Easily testable in isolation without rendering UI.
+#### Method 2: Uncontrolled Components (`useRef` / Native DOM)
+- Input value is stored directly in the DOM; React reads it only when needed (e.g. form submission): `const inputRef = useRef();`.
+- *Pros*: High performance, zero re-renders while user types.
+- *Cons*: Difficult to implement real-time validation feedback.
 
-#### Method 3: Using Immer Library (`produce`)
-- **Logic**: Allows writing seemingly "mutative" syntax like `draft.push(newItem)` or `draft[i].completed = true` which Immer converts to an immutable copy under the hood.
+#### Method 3: Modern React 19 Form Actions & `useActionState`
+- React 19 embraces native HTML forms with server/client Actions: `<form action={formAction}>`.
+- The `useActionState(asyncAction, initialState)` hook provides `[state, formAction, isPending]`, automatically handling pending spinners, submission states, and optimistic updates without manually managing input states.
+
+---
+
+### Question 7: Why is the `key` prop essential in lists, and why is using the array index as a key considered an anti-pattern?
+
+#### Logic & Background:
+React uses the `key` prop during reconciliation (Fiber diffing) to match elements in the previous tree with elements in the next tree.
+
+#### The Issue with Index as Key:
+- If items are added, removed, or sorted, the index of items shifts.
+- React matches nodes by key: if item at index 0 is deleted, the old item 1 becomes index 0. React believes index 0 was updated rather than deleted, causing component state (like checked checkboxes or input text) to persist on the wrong item.
+
+#### Correct Solutions:
+- **Unique Database ID**: Always use stable, unique IDs (e.g. `todo.id` or `uuid`).
+- **Natural Composite Key**: If no ID exists, combine unique fields: `${item.title}-${item.createdAt}`.
+
+---
+
+### Question 8: How do Error Boundaries work in React, and can they catch errors in asynchronous code?
+
+#### Logic & Background:
+Uncaught JavaScript errors inside component rendering crash the entire React application tree, presenting a blank white screen to users.
+
+#### How Error Boundaries Work:
+- Components that implement `static getDerivedStateFromError()` and `componentDidCatch()`.
+- Wraps child component trees: if a rendering error occurs, it displays a fallback UI instead of crashing the app.
+
+#### Limitations (What Error Boundaries CANNOT Catch):
+- Event handlers (e.g. `onClick={() => { throw new Error(); }}`) - Use standard `try/catch` here instead.
+- Asynchronous code (`setTimeout`, `requestAnimationFrame`, `async/await` inside `useEffect`).
+- Server-side rendering (SSR) errors.
 
 ---
 
